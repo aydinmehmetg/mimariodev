@@ -482,3 +482,159 @@ class Nrl(object):
         plt.draw()
         plt.pause(1)
         #plt.close()          
+
+#Throughput
+class Throughput(object):
+
+    #initialization
+    def __init__(self,filename):
+        """Initialises a Throughput
+
+        Arguments:
+        filename -- the name of the trace file ex:out.tr
+        receiver_node --the name of receiver node to compute Throughput
+
+        """
+
+        if (filename[0]=='/'):
+             self.filename=filename
+             self.legend=filename+'--Throughput'
+        else:
+            directory=os.getcwd()
+            #filename with directory
+            self.legend=filename+'--Throughput'
+            self.filename=directory+'/'+filename
+
+        self.rc1='1' 
+        self.rc2='16'
+        self.rc3='20' 
+        self.rc4='21' 
+        
+        #network parameters
+        self.ptype1='tcp' #for tcp packet
+        self.ptype2='cbr' #for cbr packet
+        
+        #packet size
+        self.psize=0.0
+
+        #event
+        self.received='r' #recevied event
+        self.sent='+'     #sent event
+      
+        #data array
+        self.throughput_array=[0]
+        self.time_array=[0]
+
+        #sample
+        self.throughput_sample=[0]
+        self.time_sample=[0]
+        #pdr value
+        self.value=0
+        self._step=0
+        self._compute_throughput()
+        
+
+    def _compute_throughput(self):
+        """Compute a average Throuput in each simulation step and put it in EEdelay array
+            Average Throughput=Packet received/Time Taken
+        """
+        with awk.Reader(self.filename) as reader:
+            oldtime=0.0
+            time=0.0
+            interval=0.0
+            cum_interval=0.0
+            psize_hold=0.0
+            
+            #sampling data
+            samp=0
+            self.throughput_array=[]
+            self.time_array=[]
+            
+            for record in reader:
+                #getting time and packet size
+                time=float(record[time_idx])
+                psize=float(record[psize_idx])
+
+                interval=time-oldtime
+                cum_interval+=interval
+                oldtime=time
+                self.time_array.append(cum_interval)
+                #Average throughput computing
+                if((record[event_idx]==self.received) and (record[ptype_idx]==self.ptype1 or record[ptype_idx]==self.ptype2) 
+                   and ((record[rc_idx]==self.rc1) or (record[rc_idx]==self.rc2) or (record[rc_idx]==self.rc3) or (record[rc_idx]==self.rc4)) ):
+                    samp+=1
+                    throughput=(samp*psize*8/cum_interval)/(1000)
+                    self.throughput_array.append(throughput)
+                    psize_hold=psize
+                else:
+                    throughput=(samp*psize_hold*8/cum_interval)/(1000)
+                    self.throughput_array.append(throughput)
+                self.value=throughput
+
+    #sampling fonction
+    def sample(self,*step):
+        """Sampling data, by default sampling step is 1 sec
+        """
+        try:
+            stp=float(step[0])
+        except:
+            stp=0.0
+
+        if stp==0.0:
+            stp=1
+        else:
+            stp=stp
+
+        self._step=stp
+        oldtime=0
+        interval=0
+
+        self.throughput_sample=[]
+        self.time_sample=[]
+
+        idx=0
+        for timesample in self.time_array:
+            interval=timesample-oldtime
+            idx+=1
+            if interval>=self._step:
+                oldtime=timesample
+                self.time_sample.append(timesample)
+                self.throughput_sample.append(self.throughput_array[idx])
+
+    #plot fonction
+    def plot(self,*argv):
+        """plot data
+
+        Arguments:
+        as matplotlib
+        """
+        #test sampling
+        try:
+            var=float(self.time_sample[3])
+        except:
+            var=-1
+        if (var!=-1):
+            #plot sample
+            try:
+                _arg=list(argv)
+                args=_arg[0]
+            except:
+                args='s-'
+            plt.plot(self.time_sample,self.throughput_sample,args,label=self.legend)
+        else:
+            #plot array
+            try:
+                _arg=list(argv)
+                args=_arg[0]
+                plt.plot(self.time_array,self.throughput_array,args,label=self.legend)
+            except :
+                plt.plot(self.time_array,self.throughput_array,label=self.legend)
+        plt.title('Average throughput')
+        plt.xlabel('Time [s]')
+        plt.ylabel('Average throughput [Kbps]')
+        plt.grid(True)
+        plt.legend()
+        plt.draw()
+        plt.pause(1)
+        #plt.close()
+
