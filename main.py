@@ -26,14 +26,6 @@ dadd_idx='$11'
 class Eedelay(object):
     #initialization
     def __init__(self,filename):
-        """Initialises a Eedelay
-
-        Arguments:
-        filename -- the name of the trace file ex:out.tr
-        receiver_node --the name of receiver node to compute EEdelay
-
-        """
-
         if (filename[0]=='/'):
              self.filename=filename
              self.legend=filename+'--EEdelay'
@@ -47,9 +39,9 @@ class Eedelay(object):
             self.rc3='20' 
             self.rc4='21' 
         
-        #network parameters
-        self.ptype1='tcp' #for tcp packet
-        self.ptype2='cbr' #for cbr packet
+        
+        self.ptype1='tcp'
+        self.ptype2='cbr' 
         self.event='r'
 
         #data array
@@ -64,10 +56,6 @@ class Eedelay(object):
         self._step=0
     
     def _compute_eedelay(self):
-        """Compute the average of end to end delay in each simulation step and put it in EEdelay array
-            end to end delay=Time/No.Sample
-        """
-
         with awk.Reader(self.filename) as reader:
             oldtime=0.0
             time=0.0
@@ -92,8 +80,6 @@ class Eedelay(object):
         
     #sampling fonction
     def sample(self,*step):
-        """Sampling data, by default sampling step is 1 sec
-        """
         try:
             stp=float(step[0])
         except:
@@ -119,11 +105,7 @@ class Eedelay(object):
                 
         #plot fonction
     def plot(self,*argv):
-        """plot data
 
-        Arguments:
-        as matplotlib
-        """
         #test sampling
         try:
             var=float(self.time_sample[3])
@@ -146,8 +128,8 @@ class Eedelay(object):
             except :
                 plt.plot(self.time_array,self.eedelay_array,label=self.legend)
         plt.title('End-to-End delay')
-        plt.xlabel('Time [s]')
-        plt.ylabel('Average EEdelay [s]')
+        plt.xlabel('Zaman [s]')
+        plt.ylabel('Ortalama gecikme [s]')
         plt.grid(True)
         plt.legend()
         plt.draw()
@@ -158,15 +140,6 @@ class Pdr(object):
     
     #initialization
     def __init__(self,filename):
-        """Initialises a Pdr
-        :Packet delivery ratio
-        
-        Arguments:
-        filename -- the name of the trace file ex:out.tr
-        receiver_node --the name of receiver node to compute a PDR
-
-        """
-        
         if (filename[0]=='/'):
              self.filename=filename
              self.legend=filename+'--PDR'
@@ -180,7 +153,7 @@ class Pdr(object):
         
         #network parameters
         self.ptype1='tcp' #for tcp packet
-        self.ptype2='cbr' #for cbr packet
+        self.ptype2='ack' #for cbr packet
         
         #event
         self.received='r' #recevied event
@@ -202,9 +175,6 @@ class Pdr(object):
         
     #compute pdr
     def _compute_pdr(self):
-        """Compute the packet delivery ratio in each simulation step and put it in EEdelay array
-            PDR=No delivered Packet/No Sent Packet
-        """
         with awk.Reader(self.filename) as reader:
             #old_time, time, interval and cum_interval initialization
             oldtime=0.0
@@ -251,8 +221,6 @@ class Pdr(object):
 
     #sampling fonction
     def sample(self,*step):
-        """Sampling data, by default sampling step is 1 sec
-        """
         try:
             stp=float(step[0])
         except:
@@ -282,10 +250,6 @@ class Pdr(object):
                 
     #plot fonction
     def plot(self,*argv):
-        """plot data
-        Arguments:
-        as matplotlib
-        """
         #test sampling
         try:
             var=float(self.time_sample[3])
@@ -308,7 +272,7 @@ class Pdr(object):
             except :
                 plt.plot(self.time_array,self.pdr_array,label=self.legend)
         plt.title('Packet Delivery Ratio [PDR]')
-        plt.xlabel('Time [s]')
+        plt.xlabel('Zaman [s]')
         plt.ylabel('PDR')
         plt.grid(True)
         plt.legend()
@@ -321,14 +285,6 @@ class Nrl(object):
     
     #initialization
     def __init__(self,filename,routing_packet):
-        """Initialises a Nrl
-        :Normalized routing load
-        
-        Arguments:
-        filename -- the name of the trace file ex:out.tr
-        receiver_node --the name of receiver node to compute NRL
-
-        """
         if (filename[0]=='/'):
              self.filename=filename
              self.legend=filename+'--NRL'
@@ -340,7 +296,7 @@ class Nrl(object):
        
         #network parameters
         self.ptype1='tcp' #for tcp packet
-        self.ptype2='cbr' #for cbr packet
+        self.ptype2='ack' #for cbr packet
         #routing packet
         self.routing_packet=routing_packet
       
@@ -363,9 +319,7 @@ class Nrl(object):
         self.sample()
 
     def _compute_nrl(self):
-        """Compute Normalized routing load in each simulation step and put it in EEdelay array
-            NRL=No.Routed packet/No. Delivery packet
-        """        
+      
         with awk.Reader(self.filename) as reader:
             #old_time, time, interval and cum_interval initialization
             oldtime=0.0
@@ -416,8 +370,6 @@ class Nrl(object):
     
     #sampling function
     def sample(self, *step):
-        """Sampling data, by default sampling step is 1 sec
-        """
         try:
             stp=float(step[0])
         except:
@@ -448,11 +400,6 @@ class Nrl(object):
 
     #plot fonction
     def plot(self,*argv):
-        """plot data
-
-        Arguments:
-        as matplotlib
-        """
         #test sampling
         try:
             var=float(self.time_sample[3])
@@ -475,7 +422,7 @@ class Nrl(object):
             except :
                 plt.plot(self.time_array,self.nrl_array,label=self.legend)
         plt.title('Normalized Routing Load [NRL]')
-        plt.xlabel('Time [s]')
+        plt.xlabel('Zaman [s]')
         plt.ylabel('NRL')
         plt.grid(True)
         plt.legend()
@@ -488,14 +435,6 @@ class Throughput(object):
 
     #initialization
     def __init__(self,filename):
-        """Initialises a Throughput
-
-        Arguments:
-        filename -- the name of the trace file ex:out.tr
-        receiver_node --the name of receiver node to compute Throughput
-
-        """
-
         if (filename[0]=='/'):
              self.filename=filename
              self.legend=filename+'--Throughput'
@@ -512,7 +451,7 @@ class Throughput(object):
         
         #network parameters
         self.ptype1='tcp' #for tcp packet
-        self.ptype2='cbr' #for cbr packet
+        self.ptype2='ack' #for cbr packet
         
         #packet size
         self.psize=0.0
@@ -535,9 +474,6 @@ class Throughput(object):
         
 
     def _compute_throughput(self):
-        """Compute a average Throuput in each simulation step and put it in EEdelay array
-            Average Throughput=Packet received/Time Taken
-        """
         with awk.Reader(self.filename) as reader:
             oldtime=0.0
             time=0.0
@@ -573,8 +509,6 @@ class Throughput(object):
 
     #sampling fonction
     def sample(self,*step):
-        """Sampling data, by default sampling step is 1 sec
-        """
         try:
             stp=float(step[0])
         except:
@@ -603,11 +537,6 @@ class Throughput(object):
 
     #plot fonction
     def plot(self,*argv):
-        """plot data
-
-        Arguments:
-        as matplotlib
-        """
         #test sampling
         try:
             var=float(self.time_sample[3])
@@ -629,12 +558,186 @@ class Throughput(object):
                 plt.plot(self.time_array,self.throughput_array,args,label=self.legend)
             except :
                 plt.plot(self.time_array,self.throughput_array,label=self.legend)
-        plt.title('Average throughput')
-        plt.xlabel('Time [s]')
-        plt.ylabel('Average throughput [Kbps]')
+        plt.title('Ortalama Verimlilik')
+        plt.xlabel('Zaman [s]')
+        plt.ylabel('Ortalama Verimlilik [Kbps]')
         plt.grid(True)
         plt.legend()
         plt.draw()
         plt.pause(1)
         #plt.close()
 
+#Packet Loss
+class PacketLoss(object):
+    
+    #initialization
+    def __init__(self,filename):
+
+        if (filename[0]=='/'):
+             self.filename=filename
+             self.legend=filename+'--PACKETLOSS'
+        else:
+            directory=os.getcwd()
+            #filename with directory
+            self.legend=filename+'--PACKETLOSS'
+            self.filename=directory+'/'+filename
+
+        
+        
+        #network parameters
+        self.ptype1='tcp' #for tcp packet
+        self.ptype2='ack' #for cbr packet
+        
+        #event
+        self.received='-' #recevied event
+        self.sent='+'     #sent event
+    
+        #data array
+        self.pdr_array=[0]
+        self.time_array=[0]
+
+        self.sent_counter_array=[]
+        self.delivery_counter_array=[]
+        #sample
+        self.pdr_sample=[0]
+        self.time_sample=[0]
+        #pdr value
+        self.value=0
+        self._step=0
+        self._compute_pktLoss()
+        
+    #compute pdr
+    def _compute_pktLoss(self):
+        with awk.Reader(self.filename) as reader:
+            #old_time, time, interval and cum_interval initialization
+            oldtime=0.0
+            time=0.0
+            interval=0.0        
+            cum_interval=0.0
+            packet_loss = 0.0
+            zamanAynimi = False
+
+            #packet counter
+            self.sent_counter=0
+            self.received_counter=0
+            
+            #redefine pdr_array
+            self.pdr_array=[]
+            self.sent_array=[]
+            self.received_array=[]
+            #redefine time_array
+            self.time_array=[]
+            ilkKayit = True
+            for record in reader:
+                if(record[event_idx]=='r'):
+                    ilkKayit = True
+                    continue
+                
+                sum_sent = 0.0
+                sum_recived = 0.0
+                #getting time
+                time=float(record[time_idx])
+                if(time==oldtime):
+                    zamanAynimi=True
+                else: zamanAynimi=False
+                #interval computation
+                interval=time-oldtime
+                cum_interval+=interval
+                oldtime=time
+
+                self.time_array.append(cum_interval)
+                #pdr computing
+                if((record[event_idx]==self.received) and (record[ptype_idx]==self.ptype1 or record[ptype_idx]==self.ptype2)):
+                    self.received_array.append(record[psize_idx])
+                    self.received_counter+=1
+                    
+                if((record[event_idx]==self.sent) and (record[ptype_idx]==self.ptype1 or record[ptype_idx]==self.ptype2)):
+                    self.sent_array.append(record[psize_idx])
+                    self.sent_counter+=1
+                
+                if(zamanAynimi):
+                    if(((record[event_idx]==self.sent) or (record[event_idx]==self.received)) and (record[ptype_idx]==self.ptype1 or record[ptype_idx]==self.ptype2)):   
+                            ilkKayit = False  
+                            for item in self.received_array:
+                                sum_recived +=float(item) 
+                            for item in self.sent_array:
+                                sum_sent += float(item) 
+                            packet_loss = sum_sent - sum_recived
+                            self.pdr_array.append(packet_loss)
+                            self.sent_array.clear()
+                            self.received_array.clear()
+                            self.sent_counter = 0
+                            self.received_counter = 0       
+                elif((self.received_counter!=self.sent_counter) and ilkKayit == False):
+                    for item in self.received_array:
+                        sum_recived +=float(item) 
+                    for item in self.sent_array:
+                        sum_sent += float(item) 
+                    packet_loss = sum_sent - sum_recived
+                    self.pdr_array.append(packet_loss)
+                    self.sent_array.clear()
+                    self.received_array.clear()
+                    self.sent_counter = 0
+                    self.received_counter = 0  
+                
+
+    #sampling fonction
+    def sample(self,*step):
+        try:
+            stp=float(step[0])
+        except:
+            stp=0.0
+
+        if stp==0.0:
+            stp=1
+        else:
+            stp=stp
+        
+        self._step=stp   
+    
+        #sampling value initialization
+        self.pdr_sample=[0]
+        self.time_sample=[0]
+
+        oldtime=0
+        idx=0
+        for timesample in self.time_array:
+            interval=timesample-oldtime
+            idx+=1
+            if interval>=self._step:
+                oldtime=timesample
+                
+                self.time_sample.append(timesample)
+                self.pdr_sample.append(self.pdr_array[idx])
+                
+    #plot fonction
+    def plot(self,*argv):
+        #test sampling
+        try:
+            var=float(self.time_sample[3])
+        except:
+            var=-1
+        if (var!=-1):
+            #plot sample
+            try:
+                _arg=list(argv)
+                args=_arg[0]
+            except:
+                args='s-'
+            plt.plot(self.time_sample,self.pdr_sample,args,label=self.legend)
+        else:
+            #plot array
+            try:
+                _arg=list(argv)
+                args=_arg[0]
+                plt.plot(self.time_array,self.pdr_array,args,label=self.legend)
+            except :
+                plt.plot(self.time_array,self.pdr_array,label=self.legend)
+        plt.title('Packet Delivery Ratio [PDR]')
+        plt.xlabel('Zaman [s]')
+        plt.ylabel('PDR')
+        plt.grid(True)
+        plt.legend()
+        plt.draw()
+        plt.pause(1)
+        #plt.close()
