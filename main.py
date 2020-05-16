@@ -24,10 +24,8 @@ sadd_idx='$10'
 dadd_idx='$11'
 
 class Eedelay(object):
-       
-    
     #initialization
-    def __init__(self,filename,receiver_node):
+    def __init__(self,filename):
         """Initialises a Eedelay
 
         Arguments:
@@ -44,7 +42,10 @@ class Eedelay(object):
             #filename with directory
             self.legend=filename+'--EEdelay'
             self.filename=directory+'/'+filename
-        self.receiver_node=receiver_node
+            self.rc1='1' 
+            self.rc2='16'
+            self.rc3='20' 
+            self.rc4='21' 
         
         #network parameters
         self.ptype1='tcp' #for tcp packet
@@ -76,7 +77,8 @@ class Eedelay(object):
             #network parameter    
             for record in reader:
                 #for receiver node
-                if((record[event_idx]==self.event) and ((record[ptype_idx]==self.ptype1)or (record[ptype_idx]==self.ptype2)) and ((record[rc_idx]==self.receiver_node)) ):
+                if((record[event_idx]==self.event) and ((record[ptype_idx]==self.ptype1)or (record[ptype_idx]==self.ptype2)) 
+                   and ((record[rc_idx]==self.rc1) or (record[rc_idx]==self.rc2) or (record[rc_idx]==self.rc3) or (record[rc_idx]==self.rc4)) ):
                     time=float(record[time_idx])
                     interval=time-oldtime
                     cum_interval+=interval
@@ -155,7 +157,7 @@ class Eedelay(object):
 class Pdr(object):
     
     #initialization
-    def __init__(self,filename,receiver_node):
+    def __init__(self,filename):
         """Initialises a Pdr
         :Packet delivery ratio
         
@@ -174,7 +176,7 @@ class Pdr(object):
             self.legend=filename+'--PDR'
             self.filename=directory+'/'+filename
 
-        self.receiver_node=receiver_node
+        
         
         #network parameters
         self.ptype1='tcp' #for tcp packet
@@ -314,3 +316,169 @@ class Pdr(object):
         plt.pause(1)
         #plt.close()
         
+#Normalized Routing Load : NRL
+class Nrl(object):
+    
+    #initialization
+    def __init__(self,filename,routing_packet):
+        """Initialises a Nrl
+        :Normalized routing load
+        
+        Arguments:
+        filename -- the name of the trace file ex:out.tr
+        receiver_node --the name of receiver node to compute NRL
+
+        """
+        if (filename[0]=='/'):
+             self.filename=filename
+             self.legend=filename+'--NRL'
+        else:
+            directory=os.getcwd()
+            #filename with directory
+            self.legend=filename+'--NRL'
+            self.filename=directory+'/'+filename
+       
+        #network parameters
+        self.ptype1='tcp' #for tcp packet
+        self.ptype2='cbr' #for cbr packet
+        #routing packet
+        self.routing_packet=routing_packet
+      
+        #event
+        self.received='r' #recevied event
+        
+        #data array
+        self.nrl_array=[0]
+        self.time_array=[0]
+
+        self.route_counter_array=[]
+        self.delivery_counter_array=[]
+        #sample
+        self.nrl_sample=[0]
+        self.time_sample=[0]
+        #pdr value
+        self.value=0
+        self._step=0
+        self._compute_nrl()
+        self.sample()
+
+    def _compute_nrl(self):
+        """Compute Normalized routing load in each simulation step and put it in EEdelay array
+            NRL=No.Routed packet/No. Delivery packet
+        """        
+        with awk.Reader(self.filename) as reader:
+            #old_time, time, interval and cum_interval initialization
+            oldtime=0.0
+            time=0.0
+            interval=0.0        
+            cum_interval=0.0
+
+            #packet counter
+            route_counter=0
+            delivery_counter=0
+            
+            #redefine nrl_array
+            self.nrl_array=[]
+            #redefine time_array
+            self.time_array=[]
+
+            #redefine data array
+            self.route_counter_array=[]
+            self.delivery_counter_array=[]
+            
+            for record in reader:
+                #getting time and packet size
+                time=float(record[time_idx])
+                
+                interval=time-oldtime
+                cum_interval+=interval
+                oldtime=time
+
+                self.time_array.append(cum_interval)
+                #Average throughput computing
+                if((record[event_idx]==self.received) and (record[ptype_idx]==self.ptype1 or record[ptype_idx]==self.ptype2)):
+                    delivery_counter+=1
+                    self.delivery_counter_array.append(delivery_counter)
+                else:
+                    self.delivery_counter_array.append(delivery_counter)
+
+                if((record[event_idx]==self.received) and (record[ptype_idx]==self.routing_packet)):
+                    route_counter+=1
+                    self.route_counter_array.append(route_counter)
+                else:
+                    self.route_counter_array.append(route_counter)
+                if (delivery_counter==0):
+                    self.nrl_array.append(0)
+                else:
+                    self.nrl_array.append(route_counter/delivery_counter)
+                    #setting value
+                    self.value=route_counter/delivery_counter
+    
+    #sampling function
+    def sample(self, *step):
+        """Sampling data, by default sampling step is 1 sec
+        """
+        try:
+            stp=float(step[0])
+        except:
+            stp=0.0
+
+        if stp==0.0:
+            stp=1
+        else:
+            stp=stp
+        
+        self._step=stp   
+    
+        #sampling value initialization
+        self.nrl_sample=[0]
+        self.time_sample=[0]
+
+        idx=0
+        oldtime=0
+        for timesample in self.time_array:
+            interval=timesample-oldtime
+            idx+=1
+            if interval>=self._step:
+                oldtime=timesample
+                
+                self.time_sample.append(timesample)
+                #nrl sample
+                self.nrl_sample.append(self.nrl_array[idx])
+
+    #plot fonction
+    def plot(self,*argv):
+        """plot data
+
+        Arguments:
+        as matplotlib
+        """
+        #test sampling
+        try:
+            var=float(self.time_sample[3])
+        except:
+            var=-1
+        if (var!=-1):
+            #plot sample
+            try:
+                _arg=list(argv)
+                args=_arg[0]
+            except:
+                args='s-'
+            plt.plot(self.time_sample,self.nrl_sample,args,label=self.legend)
+        else:
+            #plot array
+            try:
+                _arg=list(argv)
+                args=_arg[0]
+                plt.plot(self.time_array,self.nrl_array,args,label=self.legend)
+            except :
+                plt.plot(self.time_array,self.nrl_array,label=self.legend)
+        plt.title('Normalized Routing Load [NRL]')
+        plt.xlabel('Time [s]')
+        plt.ylabel('NRL')
+        plt.grid(True)
+        plt.legend()
+        plt.draw()
+        plt.pause(1)
+        #plt.close()          
