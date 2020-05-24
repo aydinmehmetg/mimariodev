@@ -567,119 +567,84 @@ class Throughput(object):
         plt.pause(1)
         #plt.close()
 
-#Packet Loss
+#Throughput
 class PacketLoss(object):
-    
+
     #initialization
     def __init__(self,filename):
-
         if (filename[0]=='/'):
              self.filename=filename
-             self.legend=filename+'--PACKETLOSS'
+             self.legend=filename+'--Throughput'
         else:
             directory=os.getcwd()
             #filename with directory
-            self.legend=filename+'--PACKETLOSS'
+            self.legend=filename+'--Throughput'
             self.filename=directory+'/'+filename
 
-        
+        self.rc1='16'
+        self.rc2='20' 
+        self.rc3='21'
+        self.rc4='1' 
         
         #network parameters
         self.ptype1='tcp' #for tcp packet
         self.ptype2='ack' #for cbr packet
         
+        #packet size
+        self.psize=0.0
+
         #event
-        self.received='-' #recevied event
+        self.received='r' #recevied event
         self.sent='+'     #sent event
-    
+      
         #data array
-        self.pdr_array=[0]
+        self.packetloss_array=[0]
         self.time_array=[0]
 
-        self.sent_counter_array=[]
-        self.delivery_counter_array=[]
         #sample
-        self.pdr_sample=[0]
+        self.packetloss_sample=[0]
         self.time_sample=[0]
         #pdr value
-        self.value=0
         self._step=0
-        self._compute_pktLoss()
+        self._compute_packetloss()
         
-    #compute pdr
-    def _compute_pktLoss(self):
+
+    def _compute_packetloss(self):
         with awk.Reader(self.filename) as reader:
-            #old_time, time, interval and cum_interval initialization
             oldtime=0.0
             time=0.0
-            interval=0.0        
+            interval=0.0
             cum_interval=0.0
-            packet_loss = 0.0
-            zamanAynimi = False
-
-            #packet counter
-            self.sent_counter=0
-            self.received_counter=0
+            psize_hold=0.0
             
-            #redefine pdr_array
-            self.pdr_array=[]
-            self.sent_array=[]
-            self.received_array=[]
-            #redefine time_array
+            #sampling data
+            
+            self.packetloss_array=[]
             self.time_array=[]
-            ilkKayit = True
+            
             for record in reader:
-                if(record[event_idx]=='r'):
-                    ilkKayit = True
-                    continue
-                
-                sum_sent = 0.0
-                sum_recived = 0.0
-                #getting time
+                #getting time and packet size
                 time=float(record[time_idx])
-                if(time==oldtime):
-                    zamanAynimi=True
-                else: zamanAynimi=False
-                #interval computation
+                psize=float(record[psize_idx])
+
                 interval=time-oldtime
                 cum_interval+=interval
                 oldtime=time
-
                 self.time_array.append(cum_interval)
-                #pdr computing
-                if((record[event_idx]==self.received) and (record[ptype_idx]==self.ptype1 or record[ptype_idx]==self.ptype2)):
-                    self.received_array.append(record[psize_idx])
-                    self.received_counter+=1
-                    
-                if((record[event_idx]==self.sent) and (record[ptype_idx]==self.ptype1 or record[ptype_idx]==self.ptype2)):
-                    self.sent_array.append(record[psize_idx])
-                    self.sent_counter+=1
-                
-                if(zamanAynimi):
-                    if(((record[event_idx]==self.sent) or (record[event_idx]==self.received)) and (record[ptype_idx]==self.ptype1 or record[ptype_idx]==self.ptype2)):   
-                            ilkKayit = False  
-                            for item in self.received_array:
-                                sum_recived +=float(item) 
-                            for item in self.sent_array:
-                                sum_sent += float(item) 
-                            packet_loss = sum_sent - sum_recived
-                            self.pdr_array.append(packet_loss)
-                            self.sent_array.clear()
-                            self.received_array.clear()
-                            self.sent_counter = 0
-                            self.received_counter = 0       
-                elif((self.received_counter!=self.sent_counter) and ilkKayit == False):
-                    for item in self.received_array:
-                        sum_recived +=float(item) 
-                    for item in self.sent_array:
-                        sum_sent += float(item) 
-                    packet_loss = sum_sent - sum_recived
-                    self.pdr_array.append(packet_loss)
-                    self.sent_array.clear()
-                    self.received_array.clear()
-                    self.sent_counter = 0
-                    self.received_counter = 0  
-                
+                #Average throughput computing
+                if((record[event_idx]==self.received) 
+                   and (record[ptype_idx]==self.ptype1 or record[ptype_idx]==self.ptype2) 
+                   and ((record[rc_idx]==self.rc1) or (record[rc_idx]==self.rc2) or (record[rc_idx]==self.rc3) or (record[rc_idx]==self.rc4)) ):
+                    packetloss=psize_hold-psize
+                    psize_hold=0.0
+                    self.packetloss_array.append(packetloss)
+                elif(record[event_idx]==self.sent):
+                    psize_hold+=psize;
+                    packetloss = 0.0
+                    self.packetloss_array.append(packetloss)
+                else:
+                    packetloss = 0.0
+                    self.packetloss_array.append(packetloss)
 
     #sampling fonction
     def sample(self,*step):
@@ -692,29 +657,28 @@ class PacketLoss(object):
             stp=1
         else:
             stp=stp
-        
-        self._step=stp   
-    
-        #sampling value initialization
-        self.pdr_sample=[0]
-        self.time_sample=[0]
 
+        self._step=stp
         oldtime=0
+        interval=0
+
+        self.throughput_sample=[]
+        self.time_sample=[]
+
         idx=0
         for timesample in self.time_array:
             interval=timesample-oldtime
             idx+=1
             if interval>=self._step:
                 oldtime=timesample
-                
                 self.time_sample.append(timesample)
-                self.pdr_sample.append(self.pdr_array[idx])
-                
+                self.throughput_sample.append(self.packetloss_array[idx])
+
     #plot fonction
     def plot(self,*argv):
         #test sampling
         try:
-            var=float(self.time_sample[3])
+            var=float(self.time_sample[0])
         except:
             var=-1
         if (var!=-1):
@@ -724,18 +688,18 @@ class PacketLoss(object):
                 args=_arg[0]
             except:
                 args='s-'
-            plt.plot(self.time_sample,self.pdr_sample,args,label=self.legend)
+            plt.plot(self.time_sample,self.throughput_sample,args,label=self.legend)
         else:
             #plot array
             try:
                 _arg=list(argv)
                 args=_arg[0]
-                plt.plot(self.time_array,self.pdr_array,args,label=self.legend)
+                plt.plot(self.time_array,self.packetloss_array,args,label=self.legend)
             except :
-                plt.plot(self.time_array,self.pdr_array,label=self.legend)
-        plt.title('Packet Delivery Ratio [PDR]')
+                plt.plot(self.time_array,self.packetloss_array,label=self.legend)
+        plt.title('Packetloss')
         plt.xlabel('Zaman [s]')
-        plt.ylabel('PDR')
+        plt.ylabel('Packetloss [Kbps]')
         plt.grid(True)
         plt.legend()
         plt.draw()
